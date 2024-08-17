@@ -1,134 +1,114 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
-	mySetting: string;
-}
+import { ImageGen } from 'lib/imagegen';
+import { InputModal } from 'lib/inputmodal';
+import { SettingsTab } from 'lib/settingstab';
+import { DocumentInfo, MyPluginSettings } from 'lib/types';
+import { Notice, Plugin, TFile } from 'obsidian';
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+    openAiApiKey: '',
+    falApiKey: ''
 }
 
 export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+    settings: MyPluginSettings;
+    imageGen: ImageGen;
 
-	async onload() {
-		await this.loadSettings();
+    async onload() {
+        await this.loadSettings();
+        this.imageGen = new ImageGen(this.settings.falApiKey, this.settings.openAiApiKey);
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+        this.addCommand({
+            id: 'generate-banner-image',
+            name: 'Generate Banner Image (Flux AI)',
+            callback: () => this.generateBannerImage()
+        });
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+        this.addSettingTab(new SettingsTab(this.app, this));
+    }
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
+	async generateBannerImage() {
+        if (!this.settings.openAiApiKey || !this.settings.falApiKey) {
+            new Notice('Please enter your OpenAI and fal.ai API keys in the settings');
+            return;
+        }
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
+        new InputModal(this.app, async (input: string) => {
+            try {
+                const activeFile = this.app.workspace.getActiveFile();
+                if (!(activeFile instanceof TFile)) {
+                    new Notice('No file is currently open');
+                    return;
+                }
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+                new Notice('Generating image...');
+                const docInfo = await this.getCurrentFileInfo();
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
+                // Use the user input in the image generation process
+                const imageUrl = await this.imageGen.generate(input, docInfo);
+                
+                new Notice('Saving image to vault...');
+                const savedImagePath = await this.saveImageToVault(imageUrl);
+                
+                await this.prependImageToDocument(activeFile, savedImagePath);
+                new Notice('Image generated, saved, and prepended to the document');
+            } catch (error) {
+                console.error("Error in image generation process:", error);
+                new Notice('Failed to complete the image generation process');
+            }
+        }).open();
+    }
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-	}
+    onunload() {}
 
-	onunload() {
+    async loadSettings() {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    }
 
-	}
+    async saveSettings() {
+        await this.saveData(this.settings);
+        this.imageGen = new ImageGen(this.settings.falApiKey, this.settings.openAiApiKey);
+    }
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
+    async getCurrentFileInfo(): Promise<DocumentInfo> {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (activeFile instanceof TFile) {
+            const content = await this.app.vault.read(activeFile);
+            return {
+                title: activeFile.basename,
+                content: content
+            };
+        }
+        return {
+            title: "",
+            content: ""
+        };
+    }
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
+	async saveImageToVault(imageUrl: string): Promise<string> {
+        try {
+            const response = await fetch(imageUrl);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const arrayBuffer = await response.arrayBuffer();
+            
+            const fileName = `generated_image_${Date.now()}.png`;
+            const filePath = `ai_banners/${fileName}`;
+            
+            await this.app.vault.createBinary(filePath, arrayBuffer);
+            
+            return filePath;
+        } catch (error) {
+            console.error("Error saving image to vault:", error);
+            throw new Error("Failed to save image to vault");
+        }
+    }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
+    async prependImageToDocument(file: TFile, imagePath: string) {
+        const content = await this.app.vault.read(file);
+        const updatedContent = `![[${imagePath}|banner]]\n${content}`;
+        await this.app.vault.modify(file, updatedContent);
+    }
 }

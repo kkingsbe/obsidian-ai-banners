@@ -5,7 +5,9 @@
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"prepare": "cpy manifest.json versions.json main.js styles.css dist",
+		"deploy:local": "rimraf \"C:/Users/kking/OneDrive/Documents/School/.obsidian/plugins/ai-banner\" && ncp dist \"C:/Users/kking/OneDrive/Documents/School/.obsidian/plugins/ai-banner\"",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run prepare && npm run deploy:local",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [],
@@ -20,5 +22,12 @@
 		"obsidian": "latest",
 		"tslib": "2.4.0",
 		"typescript": "4.7.4"
+	},
+	"dependencies": {
+		"@fal-ai/serverless-client": "^0.14.2",
+		"axios": "^1.7.4",
+		"cpy-cli": "^5.0.0",
+		"ncp": "^2.0.0",
+		"openai": "^4.56.0"
 	}
 }
