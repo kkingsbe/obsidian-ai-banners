@@ -58,6 +58,8 @@ If you encounter issues:
 
 We welcome your input! If you experience any problems or have ideas for improvements, please open an issue on our GitHub repository.
 
+## License
+This project is licensed under the MIT License. See the LICENSE file for details.
 ---
 
 Elevate your Obsidian documents with captivating, AI-generated banners!
