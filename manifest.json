@@ -4,8 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Adds a command to the command palatte to generate a banner for the currently open document.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"author": "Kyle K",
+	"authorUrl": "https://www.linkedin.com/in/kyle-kingsberry-9690a7109/",
 	"isDesktopOnly": false
 }
