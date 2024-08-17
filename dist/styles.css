@@ -1,8 +1,34 @@
-/*
+.markdown-source-view:has(*[alt="banner"]),
+.markdown-preview-view:has(*[alt="banner"]) {
+    --banner-height: 200px;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* Margin above inline title and frontmatter. */
+.markdown-source-view:has(*[alt="banner"]).is-live-preview .cm-sizer,
+.markdown-preview-view:has(*[alt="banner"]).markdown-preview-view .markdown-preview-pusher {
+    padding-top: var(--banner-height);
+}
 
-If your plugin does not need CSS, delete this file.
 
-*/
+.markdown-source-view:has(*[alt="banner"]).is-live-preview .image-embed:has(img[alt="banner"]:first-child),
+.markdown-preview-view:has(*[alt="banner"]).markdown-preview-view span[alt="banner"]:first-child {
+    display: contents;
+}
+
+/* Positions banner image fix to the top. */
+.markdown-source-view:has(*[alt="banner"]).is-live-preview .image-embed img[alt="banner"]:first-child,
+.markdown-preview-view:has(*[alt="banner"]).markdown-preview-view img[alt="banner"]:first-child {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    object-fit: cover;
+    height: var(--banner-height);
+    margin: 0 auto;
+    width: 100%;
+    pointer-events: auto;
+    background: none !important;
+    border: none !important;
+    border-radius: none !important;
+    box-shadow: none !important;
+}
