@@ -1,7 +1,7 @@
 {
 	"id": "ai-banner",
 	"name": "AI Banner",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "Adds a command to the command palatte to generate a banner for the currently open document.",
 	"author": "Kyle K",

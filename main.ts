@@ -1,12 +1,17 @@
-import { ImageGen } from 'lib/imagegen';
+import { ImageGen } from 'lib/imagegenv2';
 import { InputModal } from 'lib/inputmodal';
 import { SettingsTab } from 'lib/settingstab';
 import { DocumentInfo, MyPluginSettings } from 'lib/types';
-import { Notice, Plugin, TFile } from 'obsidian';
+import { Editor, MarkdownView, Notice, Plugin, TFile } from 'obsidian';
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
     openAiApiKey: '',
     falApiKey: ''
+}
+
+interface IGeneratedImagePath {
+    obsidianRelUrl: string;
+    fullUrl: string;
 }
 
 export default class MyPlugin extends Plugin {
@@ -20,13 +25,19 @@ export default class MyPlugin extends Plugin {
         this.addCommand({
             id: 'generate-banner-image',
             name: 'Generate Banner Image (Flux AI)',
-            callback: () => this.generateBannerImage()
+            callback: () => this.generateImage("banner")
         });
+
+        this.addCommand({
+            id: 'generate-inline-image',
+            name: 'Generate Inline Image (Flux AI, 4:3)',
+            callback: () => this.generateImage("inline")
+        })
 
         this.addSettingTab(new SettingsTab(this.app, this));
     }
 
-	async generateBannerImage() {
+	async generateImage(type: "banner"|"inline") {
         if (!this.settings.openAiApiKey || !this.settings.falApiKey) {
             new Notice('Please enter your OpenAI and fal.ai API keys in the settings');
             return;
@@ -44,18 +55,46 @@ export default class MyPlugin extends Plugin {
                 const docInfo = await this.getCurrentFileInfo();
 
                 // Use the user input in the image generation process
-                const imageUrl = await this.imageGen.generate(input, docInfo);
+                const imageGenRes = await this.imageGen.generate(input, docInfo, type);
+                const imageUrl = imageGenRes.imageUrl;
                 
                 new Notice('Saving image to vault...');
-                const savedImagePath = await this.saveImageToVault(imageUrl);
+                const imageInfo = await this.saveImageToVault(imageUrl);
                 
-                await this.prependImageToDocument(activeFile, savedImagePath);
-                new Notice('Image generated, saved, and prepended to the document');
+                if(type == "banner") {
+                    await this.prependImageToDocument(activeFile, imageInfo.obsidianRelUrl);
+                    new Notice('Image generated, saved, and prepended to the document');
+                } else if(type == "inline") {
+                    await this.insertInlineImageAtCursor(imageInfo.fullUrl);
+                    const revisedImageGenRes = await this.imageGen.generateRevised(imageGenRes.imageDescription, imageGenRes.imagePrompt, imageGenRes.imageUrl);
+                    
+                    new Notice('Saving image to vault...');
+                    const revisedInfo = await this.saveImageToVault(revisedImageGenRes.imageUrl);
+                    await this.insertInlineImageAtCursor(revisedInfo.fullUrl);
+                    new Notice('Image generated, saved, and inserted at cursor');
+                }
             } catch (error) {
                 console.error("Error in image generation process:", error);
                 new Notice('Failed to complete the image generation process');
             }
         }).open();
+    }
+
+    async insertInlineImageAtCursor(imagePath: string) {
+        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!activeView) {
+            new Notice('No active document');
+            return;
+        }
+
+        const editor = activeView.editor;
+        const cursor = editor.getCursor();
+        const line = editor.getLine(cursor.line);
+        const beforeCursor = line.slice(0, cursor.ch);
+        const afterCursor = line.slice(cursor.ch);
+
+        const newLine = `${beforeCursor}![[${imagePath}]]${afterCursor}`;
+        editor.setLine(cursor.line, newLine);
     }
 
     onunload() {}
@@ -84,7 +123,7 @@ export default class MyPlugin extends Plugin {
         };
     }
 
-	async saveImageToVault(imageUrl: string): Promise<string> {
+	async saveImageToVault(imageUrl: string): Promise<IGeneratedImagePath> {
         try {
             const response = await fetch(imageUrl);
             
@@ -97,9 +136,12 @@ export default class MyPlugin extends Plugin {
             const fileName = `generated_image_${Date.now()}.png`;
             const filePath = `ai_banners/${fileName}`;
             
-            await this.app.vault.createBinary(filePath, arrayBuffer);
+            const file = await this.app.vault.createBinary(filePath, arrayBuffer);
             
-            return filePath;
+            return {
+                obsidianRelUrl: filePath,
+                fullUrl: file.path
+            };
         } catch (error) {
             console.error("Error saving image to vault:", error);
             throw new Error("Failed to save image to vault");
