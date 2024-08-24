@@ -150,7 +150,26 @@ export default class MyPlugin extends Plugin {
 
     async prependImageToDocument(file: TFile, imagePath: string) {
         const content = await this.app.vault.read(file);
-        const updatedContent = `![[${imagePath}|banner]]\n${content}`;
+        const lines = content.split('\n');
+        let frontmatterEndIndex = -1;
+    
+        // Find the end of frontmatter if it exists
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i] === '---') {
+                if (i === 0) {
+                    frontmatterEndIndex = lines.indexOf('---', 1);
+                } else {
+                    frontmatterEndIndex = i;
+                    break;
+                }
+            }
+        }
+    
+        // Insert the banner image after the frontmatter (if exists) or at the top
+        const insertIndex = frontmatterEndIndex !== -1 ? frontmatterEndIndex + 1 : 0;
+        lines.splice(insertIndex, 0, `![[${imagePath}|banner]]`);
+    
+        const updatedContent = lines.join('\n');
         await this.app.vault.modify(file, updatedContent);
     }
 }

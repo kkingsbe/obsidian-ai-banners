@@ -9,13 +9,12 @@
     padding-top: var(--banner-height);
 }
 
-
 .markdown-source-view:has(*[alt="banner"]).is-live-preview .image-embed:has(img[alt="banner"]:first-child),
 .markdown-preview-view:has(*[alt="banner"]).markdown-preview-view span[alt="banner"]:first-child {
     display: contents;
 }
 
-/* Positions banner image fix to the top. */
+/* Positions banner image fix to the top with bottom fade. */
 .markdown-source-view:has(*[alt="banner"]).is-live-preview .image-embed img[alt="banner"]:first-child,
 .markdown-preview-view:has(*[alt="banner"]).markdown-preview-view img[alt="banner"]:first-child {
     display: block;
@@ -31,4 +30,23 @@
     border: none !important;
     border-radius: none !important;
     box-shadow: none !important;
+    mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
+}
+
+/* New styles for positioning the document title on top of the banner */
+.markdown-preview-view:has(*[alt="banner"]) .inline-title,
+.markdown-source-view:has(*[alt="banner"]) .inline-title {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    margin: 0;
+    padding: 10px;
+    background-color: rgba(0,0,0,0.3);
+    border-radius: 5px;
+    font-size: 2em;
+    font-weight: bold;
 }
