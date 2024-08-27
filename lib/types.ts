@@ -1,4 +1,4 @@
-export interface MyPluginSettings {
+export interface AiBannerGeneratorSettings {
     falApiKey: string;
     openAiApiKey: string;
 }

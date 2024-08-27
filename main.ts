@@ -1,16 +1,16 @@
 import { ImageGen } from 'lib/imagegen';
 import { InputModal } from 'lib/inputmodal';
 import { SettingsTab } from 'lib/settingstab';
-import { DocumentInfo, MyPluginSettings } from 'lib/types';
+import { DocumentInfo, AiBannerGeneratorSettings } from 'lib/types';
 import { Notice, Plugin, TFile } from 'obsidian';
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
+const DEFAULT_SETTINGS: AiBannerGeneratorSettings = {
     openAiApiKey: '',
     falApiKey: ''
 }
 
-export default class MyPlugin extends Plugin {
-    settings: MyPluginSettings;
+export default class AiBannerGenerator extends Plugin {
+    settings: AiBannerGeneratorSettings;
     imageGen: ImageGen;
 
     async onload() {
